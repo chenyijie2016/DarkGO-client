@@ -15,4 +15,4 @@ api = restful.Api(app)
 api.add_resource(DarkGO, '/game')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=6005, debug=True)
+    app.run(host='0.0.0.0', port=6003, debug=True)
