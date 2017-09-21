@@ -13,6 +13,9 @@ pattern = re.compile(r'[A-Z] \d\d?', re.M)
 POST_HEADERS = {'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST',
                 'Access-Control-Allow-Headers': 'x-requested-with,content-type'}
+PUT_HEADERS = {'Access-Control-Allow-Origin': '*',
+               'Access-Control-Allow-Methods': 'PUT',
+               'Access-Control-Allow-Headers': 'x-requested-with,content-type'}
 STR = 'ABCDEFGHJKLMNOPQRSTUVWXYZ'
 sgf_str = 'abcdefghijklmnopqrstuvwxyz'
 
@@ -59,16 +62,50 @@ def game(game_id, q):
 class DarkGO(restful.Resource):
     def post(self):
         parse = reqparse.RequestParser()
-        # parse.add_argument('pos')
+
         parse.add_argument('msg', type=str)
         parse.add_argument('game_id', type=str, required=True)
 
-        # parse.add_argument('x', type=int)
-        # parse.add_argument('y', type=int)
+        args = parse.parse_args()
+        game_id = args["game_id"]
+        if not current_app.config["gamepool"].get(game_id):
+            return {"message": "game not exists!"}, 200, POST_HEADERS
+        q = current_app.config["queuepool"].get(game_id)
+
+        moves = args["msg"].split(';')
+        del moves[len(moves) - 1]
+        move = moves[len(moves) - 1]
+        print(move)
+        x = sgf_str.find(move[2])
+        y = sgf_str.find(move[3])
+
+        pos_send = STR[int(x)] + ' ' + str(19 - y)
+        q.put(pos_send)
+
+        # Waiting the Sub Thread to return the Result
+        time.sleep(1)
+        while True:
+            try:
+                time.sleep(0.1)
+                value = q.get(False)
+                # print('Flask get Result______________________')
+                posmsg = value.split(' ')
+                x = STR.find(posmsg[0])
+                y = 19 - int(posmsg[1])
+                return {
+                           "msg": args["msg"] + 'W[' + sgf_str[x] + sgf_str[y] + '];',
+                           "game_id": game_id
+                       }, 200, POST_HEADERS
+            except BaseException:
+                # print('Flask is Waitting...')
+                continue
+
+    def put(self):
+        parse = reqparse.RequestParser()
+        parse.add_argument('game_id', type=str, required=True)
         args = parse.parse_args()
         game_id = args["game_id"]
 
-        value = ''
         if not current_app.config["gamepool"].get(game_id):
             q = Queue()
             pw = Process(target=game, args=(game_id, q,))
@@ -80,36 +117,6 @@ class DarkGO(restful.Resource):
             # Start New Thread
             pw.start()
 
-            # print(value)
-            # print(current_app.config["gamepool"])
-            return {"msg": "New game Create!"}, 200, POST_HEADERS
+            return {"message": "New game Create!"}, 200, PUT_HEADERS
         else:
-            q = current_app.config["queuepool"].get(game_id)
-
-            moves = args["msg"].split(';')
-            del moves[len(moves) - 1]
-            move = moves[len(moves) - 1]
-            print(move)
-            x = sgf_str.find(move[2])
-            y = sgf_str.find(move[3])
-
-            pos_send = STR[int(x)] + ' ' + str(19 - y)
-            q.put(pos_send)
-
-            # Waiting the Sub Thread to return the Result
-            time.sleep(1)
-            while True:
-                try:
-                    time.sleep(0.1)
-                    value = q.get(False)
-                    # print('Flask get Result______________________')
-                    posmsg = value.split(' ')
-                    x = STR.find(posmsg[0])
-                    y = 19 - int(posmsg[1])
-                    return {
-                               "msg": args["msg"] + 'W[' + sgf_str[x] + sgf_str[y] + '];',
-                               "game_id": game_id
-                           }, 200, POST_HEADERS
-                except BaseException:
-                    # print('Flask is Waitting...')
-                    continue
+            return {"message": "game_id exists!"}, 200, PUT_HEADERS
