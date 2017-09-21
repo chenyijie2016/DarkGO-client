@@ -13,11 +13,18 @@ pattern = re.compile(r'[A-Z] \d\d?', re.M)
 POST_HEADERS = {'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST',
                 'Access-Control-Allow-Headers': 'x-requested-with,content-type'}
-PUT_HEADERS = {'Access-Control-Allow-Origin': '*',
-               'Access-Control-Allow-Methods': 'PUT',
-               'Access-Control-Allow-Headers': 'x-requested-with,content-type'}
+GET_HEADERS = {'Access-Control-Allow-Origin': '*',
+               'Access-Control-Allow-Methods': 'GET',
+               'Access-Control-Allow-Headers': 'x-requested-with,content-type'
+               }
 STR = 'ABCDEFGHJKLMNOPQRSTUVWXYZ'
 sgf_str = 'abcdefghijklmnopqrstuvwxyz'
+
+
+def log(message):
+    f = open('log.txt', 'a')
+    f.write(message + '\n')
+    f.close()
 
 
 def game(game_id, q):
@@ -39,6 +46,7 @@ def game(game_id, q):
             process.expect('1:')
             # print(os.getpid(), process.buffer.decode('utf-8'))
 
+            log(str(os.getpid()gi) + value)
             # Send the position to the DarkGo
             process.sendline(value)
 
@@ -100,7 +108,7 @@ class DarkGO(restful.Resource):
                 # print('Flask is Waitting...')
                 continue
 
-    def put(self):
+    def get(self):
         parse = reqparse.RequestParser()
         parse.add_argument('game_id', type=str, required=True)
         args = parse.parse_args()
@@ -117,6 +125,6 @@ class DarkGO(restful.Resource):
             # Start New Thread
             pw.start()
 
-            return {"message": "New game Create!"}, 200, PUT_HEADERS
+            return {"message": "New game Create!"}, 200, GET_HEADERS
         else:
-            return {"message": "game_id exists!"}, 200, PUT_HEADERS
+            return {"message": "game_id exists!"}, 200, GET_HEADERS
