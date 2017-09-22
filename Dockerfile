@@ -10,5 +10,5 @@ WORKDIR /app
 
 RUN pip3 install -r requirements.txt
 ENTRYPOINT ["python3"]
-EXPOSE 6003
+EXPOSE 6006
 CMD ["app.py"]
