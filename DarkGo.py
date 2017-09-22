@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-     
 # Copyright (c) 2017 cyj <chenyijiethu@gmail.com>
 # Date: 17-9-18
+import os
+import re
+import time
+from multiprocessing import Process, Queue
+
+import flask_restful as restful
 import pexpect
 from flask import current_app
 from flask_restful import reqparse
-import sys, time, os, re
-import flask_restful as restful
-from multiprocessing import Process, Queue
 
 pattern = re.compile(r'[A-Z] \d\d?', re.M)
 POST_HEADERS = {'Access-Control-Allow-Origin': '*',
@@ -46,7 +49,7 @@ def game(game_id, q):
             process.expect('1:')
             # print(os.getpid(), process.buffer.decode('utf-8'))
 
-            log(str(os.getpid()gi) + value)
+            log(str(os.getpid()) + value)
             # Send the position to the DarkGo
             process.sendline(value)
 
@@ -114,6 +117,14 @@ class DarkGO(restful.Resource):
         args = parse.parse_args()
         game_id = args["game_id"]
 
+        if self.__create_new_game(game_id):
+
+            return {"message": "New game Create!"}, 200, GET_HEADERS
+        else:
+            return {"message": "game_id exists!"}, 200, GET_HEADERS
+
+    @staticmethod
+    def __create_new_game(game_id):
         if not current_app.config["gamepool"].get(game_id):
             q = Queue()
             pw = Process(target=game, args=(game_id, q,))
@@ -124,7 +135,6 @@ class DarkGO(restful.Resource):
 
             # Start New Thread
             pw.start()
-
-            return {"message": "New game Create!"}, 200, GET_HEADERS
+            return True
         else:
-            return {"message": "game_id exists!"}, 200, GET_HEADERS
+            return False
